@@ -1,0 +1,1 @@
+A data-driven, gamified platform to track, analyze, and reduce carbon footprints. Built for the 48-hour Sustainability Hackathon at Düzce University.
