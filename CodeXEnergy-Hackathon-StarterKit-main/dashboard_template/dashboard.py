@@ -20,7 +20,7 @@ st.sidebar.markdown("### ⚙️ Settings")
 mode = st.sidebar.radio("Select View:", ["Admin Dashboard", "Student Mode", "🎁 Rewards"])
 st.sidebar.markdown("---")
 st.sidebar.success("AI Core: Online 🤖")
-st.sidebar.info("Smart Recycling – Team ERROR-404")
+st.sidebar.info("Smart Campus – Team ERROR-404")
 
 # ================================================
 # 1. ADMIN DASHBOARD
@@ -338,7 +338,7 @@ elif mode == "Student Mode":
 # ================================================
 # 3. REWARDS PAGE
 # ================================================
-elif mode == "🎁 Rewards":
+elif mode == "Rewards":
     st.title("🎁 EcoTrack Rewards")
     student_id = st.text_input("Enter your Student ID:", "2021001")
 
