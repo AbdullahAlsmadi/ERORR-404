@@ -1,0 +1,13 @@
+[
+    {
+        "student_id": "221015213",
+        "points_added": 10,
+        "carbon_saved": 80,
+        "timestamp": "2026-05-02T19:08:18.485093",
+        "item_details": {
+            "material": "Plastic",
+            "subtype": "Plastic Bottles",
+            "size": "1 L"
+        }
+    }
+]
