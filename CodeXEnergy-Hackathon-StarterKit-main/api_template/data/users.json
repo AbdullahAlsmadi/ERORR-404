@@ -2,15 +2,15 @@
     "221015213": {
         "student_id": "221015213",
         "name": "",
-        "green_points": 10,
-        "carbon_saved_grams": 80,
-        "scan_count": 1
+        "green_points": 20,
+        "carbon_saved_grams": 160,
+        "scan_count": 2
     },
     "221015215": {
         "student_id": "221015215",
         "name": "",
-        "green_points": 10,
-        "carbon_saved_grams": 80,
-        "scan_count": 1
+        "green_points": 20,
+        "carbon_saved_grams": 160,
+        "scan_count": 2
     }
 }
