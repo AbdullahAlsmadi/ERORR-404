@@ -3,59 +3,68 @@ import pandas as pd
 import altair as alt
 
 # 1. Sayfa Ayarları (إعدادات الصفحة)
-st.set_page_config(page_title="Yeşil Puan Dashboard", layout="wide", page_icon="♻️")
+st.set_page_config(page_title="Yeşil Puan | Kampüs Yönetimi", layout="wide", page_icon="♻️")
 
 # 2. Başlık ve Açıklama (العنوان والوصف)
-st.title("♻️ 'Yeşil Puan' Sistemi - Kapsamlı Geri Dönüşüm")
-st.markdown("Plastik, cam, kağıt ve metal geri dönüşüm istatistiklerini takip etmek ve kampüsün karbon ayak izini azaltmak için üniversite yönetimi kontrol paneli.")
-
-st.divider() # خط فاصل
-
-# 3. Hızlı İstatistikler (إحصائيات سريعة للجامعة)
-st.subheader("📊 Günlük Kampüs İstatistikleri")
-col1, col2, col3, col4 = st.columns(4)
-col1.metric(label="Toplanan Toplam Atık", value="3.450 Adet", delta="+420 Bugün")
-col2.metric(label="Tasarruf Edilen Karbon (CO2)", value="345 kg", delta="-45 kg (İyileşme)")
-col3.metric(label="Dağıtılan Toplam Puan", value="34.500 Puan", delta="+4.200 Bugün")
-col4.metric(label="Aktif Öğrenci Sayısı", value="850", delta="+12 Yeni")
+st.title("♻️ 'Yeşil Puan' Sistemi - Akıllı Kampüs Yönetimi")
+st.markdown("""
+Bu panel, üniversite yönetiminin kampüs genelindeki geri dönüşüm faaliyetlerini izlemesi için tasarlanmıştır. 
+Öğrenciler QR kod okuttukça veriler anlık olarak güncellenir.
+""")
 
 st.divider()
 
-# 4. Sahte Veri Tablosu (جدول البيانات الوهمي لعمليات الـ QR بأنواع مختلفة)
+# 3. Özet Metrikler (الإحصائيات الرئيسية)
+st.subheader("📊 Genel Performans")
+m1, m2, m3, m4 = st.columns(4)
+m1.metric(label="Geri Dönüştürülen Toplam Atık", value="2,145 Adet", delta="+12% Bugün")
+m2.metric(label="Tasarruf Edilen Karbon (CO2)", value="185.4 kg", delta="-8.2 kg")
+m3.metric(label="Dağıtılan Yeşil Puan", value="21,450", delta="+1,200 اليوم")
+m4.metric(label="Aktif Katılımcı Öğrenci", value="642", delta="+15 Yeni")
+
+st.divider()
+
+# 4. Veri Hazırlama (البيانات)
 @st.cache_data
-def load_mock_data():
+def get_final_data():
     data = {
-        "Tarih ve Saat": ["2026-05-02 10:15", "2026-05-02 11:30", "2026-05-02 12:05", "2026-05-02 12:45", "2026-05-02 13:10"],
-        "Öğrenci Numarası": ["20230199", "20220455", "20240112", "20210988", "20230777"],
-        "Atık Türü": ["Plastik", "Cam", "Kağıt/Karton", "Metal (Kutu)", "Plastik"],
-        "Adet / Ağırlık": ["5 Adet", "2 Adet", "1.5 kg", "3 Adet", "10 Adet"],
-        "Kazanılan Puan": [50, 40, 30, 60, 100],
-        "Tasarruf Edilen Karbon (gram)": [400, 600, 1500, 900, 800]
+        "Tarih": ["02.05 10:15", "02.05 11:30", "02.05 12:05", "02.05 12:45", "02.05 13:10", "02.05 13:45"],
+        "Öğrenci No": ["20230199", "20220455", "20240112", "20210988", "20230777", "20240552"],
+        "Atık Türü": ["Plastik", "Cam", "Kağıt", "Plastik", "Cam", "Kağıt"],
+        "Miktar": ["5 Şişe", "2 Şişe", "1.2 kg", "10 Şişe", "4 Şişe", "0.8 kg"],
+        "Puan": [50, 40, 30, 100, 80, 20],
+        "CO2 Tasarrufu (g)": [400, 600, 1200, 800, 1200, 800]
     }
     return pd.DataFrame(data)
 
-df = load_mock_data()
+df = get_final_data()
 
-# 5. Görselleştirme ve Tabloyu Yan Yana Gösterme (عرض الرسم البياني والجدول)
-col_chart, col_table = st.columns([1, 1.5]) # تقسيم الشاشة لعمودين
+# 5. Görselleştirme Bölümü (الرسوم البيانية)
+col_left, col_right = st.columns([1, 1.5])
 
-with col_chart:
-    st.subheader("📈 Atık Türlerine Göre Dağılım")
-    # بيانات الرسم البياني
-    chart_data = pd.DataFrame({
-        'Atık Türü': ['Plastik', 'Cam', 'Kağıt', 'Metal'],
-        'Toplanan Miktar': [1200, 450, 900, 600]
+with col_left:
+    st.subheader("📈 Atık Dağılımı")
+    # رسم بياني دائري لتوزيع أنواع النفايات
+    source = pd.DataFrame({
+        "Kategori": ["Plastik", "Kağıt", "Cam"],
+        "Değer": [55, 30, 15] # نسب مئوية افتراضية
     })
     
-    # رسم بياني باستخدام Altair
-    pie_chart = alt.Chart(chart_data).mark_arc(innerRadius=50).encode(
-        theta=alt.Theta(field="Toplanan Miktar", type="quantitative"),
-        color=alt.Color(field="Atık Türü", type="nominal", legend=alt.Legend(title="Atık Türü")),
-        tooltip=['Atık Türü', 'Toplanan Miktar']
+    chart = alt.Chart(source).mark_arc(innerRadius=60).encode(
+        theta=alt.Theta(field="Değer", type="quantitative"),
+        color=alt.Color(field="Kategori", type="nominal", 
+                        scale=alt.Scale(range=['#0068c9', '#83c9ff', '#29b09d'])),
+        tooltip=["Kategori", "Değer"]
     ).properties(height=300)
-    
-    st.altair_chart(pie_chart, use_container_width=True)
+    st.altair_chart(chart, use_container_width=True)
+    st.info("💡 En çok geri dönüşüm **Plastik** kategorisinde yapılıyor.")
 
-with col_table:
-    st.subheader("📋 Son İşlemler")
-    st.dataframe(df, use_container_width=True)
+with col_right:
+    st.subheader("📋 Son İşlemler (Canlı Akış)")
+    st.dataframe(df, use_container_width=True, hide_index=True)
+
+# 6. Footer (تذييل الصفحة)
+st.sidebar.success("Sistem Durumu: Aktif 🟢")
+st.sidebar.write("---")
+st.sidebar.markdown("### Hedefimiz:")
+st.sidebar.info("Kampüs karbon ayak izini %20 oranında azaltmak.")
