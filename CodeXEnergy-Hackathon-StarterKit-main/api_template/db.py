@@ -24,14 +24,16 @@ def get_user(student_id):
     db = load_db()
     return db.get(str(student_id))
 
-def log_scan(student_id, points, carbon):
-    """Record a scan event in scans.json."""
+def log_scan(student_id, points, carbon, item_details=None):
+    """Record a scan event in scans.json, optionally with item details."""
     entry = {
         "student_id": str(student_id),
         "points_added": points,
         "carbon_saved": carbon,
         "timestamp": datetime.datetime.now().isoformat()
     }
+    if item_details:
+        entry["item_details"] = item_details
     scans = []
     if os.path.exists(SCANS_PATH):
         with open(SCANS_PATH, "r") as f:
@@ -48,7 +50,7 @@ def get_recent_scans(limit=10):
         scans = json.load(f)
     return scans[-limit:]
 
-def add_green_points(student_id, points=10, carbon_saved=80):
+def add_green_points(student_id, points=10, carbon_saved=80, item_details=None):
     """
     Add green points and carbon saved for a student.
     Creates a new profile if student doesn't exist.
@@ -60,10 +62,12 @@ def add_green_points(student_id, points=10, carbon_saved=80):
             "student_id": student_id,
             "name": "",
             "green_points": 0,
-            "carbon_saved_grams": 0
+            "carbon_saved_grams": 0,
+            "scan_count": 0
         }
     db[student_id]["green_points"] += points
     db[student_id]["carbon_saved_grams"] += carbon_saved
+    db[student_id]["scan_count"] = db[student_id].get("scan_count", 0) + 1
     save_db(db)
-    log_scan(student_id, points, carbon_saved)  # تسجيل العملية
+    log_scan(student_id, points, carbon_saved, item_details)  # Record the scan with optional details
     return db[student_id]

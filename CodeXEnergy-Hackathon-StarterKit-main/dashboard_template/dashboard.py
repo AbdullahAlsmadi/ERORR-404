@@ -77,7 +77,6 @@ if mode == "Admin Dashboard":
     
     with col_left:
         st.subheader("📈 Waste Distribution")
-        # جعل الأرقام تتفاعل مع عدد السحوبات ليبدو النظام حياً
         plastic_val = 55 + (total_scans * 2)
         paper_val = 30 + total_scans
         glass_val = 15 + int(total_scans * 0.5)
@@ -99,7 +98,6 @@ if mode == "Admin Dashboard":
         st.subheader("📋 Recent Scans (Live Feed)")
         if scans:
             df_scans = pd.DataFrame(scans)
-            # ترتيب الأعمدة وتجميلها
             if 'timestamp' in df_scans.columns:
                 df_scans = df_scans.sort_values(by='timestamp', ascending=False).head(5)
             st.dataframe(df_scans, use_container_width=True, hide_index=True)
@@ -108,7 +106,6 @@ if mode == "Admin Dashboard":
             
         st.markdown("<br>", unsafe_allow_html=True)
         
-        # Leaderboard Section
         st.subheader("🏆 Top Recyclers")
         students_list = stats.get("students", [])
         if students_list:
@@ -119,7 +116,7 @@ if mode == "Admin Dashboard":
             st.warning("Waiting for students to start recycling!")
 
 # ================================================
-# 2. STUDENT MODE
+# 2. STUDENT MODE (with manual entry)
 # ================================================
 else:
     st.title("🎓 My Green Card")
@@ -135,7 +132,6 @@ else:
                     user = resp.json()
                     pts = user["green_points"]
                     
-                    # نظام الأوسمة (Gamification Badges)
                     if pts < 50:
                         badge = "🌱 Eco-Apprentice"
                     elif pts < 150:
@@ -150,7 +146,6 @@ else:
                     m1.metric("🌿 My Points", pts)
                     m2.metric("🌍 CO₂ Saved (g)", user["carbon_saved_grams"])
                     
-                    # شريط التقدم للمكافآت (Reward Progress Bar)
                     st.markdown("---")
                     st.markdown("**☕ Free Campus Coffee Goal:**")
                     goal = 100
@@ -175,14 +170,74 @@ else:
         st.caption("Show this code at the recycling station to earn points.")
 
     st.divider()
-    st.subheader("🔄 Test: Simulate a Recycling Scan")
+
+    # ========== 🆕 MANUAL RECYCLING ENTRY ==========
+    st.subheader("📝 Manual Recycling Entry (Demo)")
+    st.markdown("Because you don’t have a physical QR scanner, you can manually log your recycling here.")
+
+    # Material selection
+    material = st.selectbox("Material", ["Select...", "Plastic", "Paper", "Glass"])
+
+    subtype = None
+    size = None
+
+    if material != "Select...":
+        if material == "Plastic":
+            subtype = st.selectbox("Subtype", ["Select...", "Plastic Bottles", "Plastic Cups"])
+        elif material == "Paper":
+            subtype = st.selectbox("Subtype", ["Select...", "Notebook", "Carton", "Paper Cups"])
+        elif material == "Glass":
+            subtype = st.selectbox("Subtype", ["Select...", "Glass Bottles"])
+
+        if subtype and subtype != "Select...":
+            if subtype == "Plastic Bottles":
+                size = st.selectbox("Size", ["1.5 L", "1 L"])
+            elif subtype == "Plastic Cups":
+                size = st.selectbox("Size", ["7 oz", "8 oz", "12 oz"])
+            elif subtype == "Paper Cups":
+                size = st.selectbox("Size", ["7 oz", "8 oz", "12 oz"])
+            elif subtype == "Notebook":
+                size = st.selectbox("Size", ["A4", "A5"])
+            elif subtype == "Carton":
+                size = st.selectbox("Size", ["Small", "Medium", "Large"])
+            elif subtype == "Glass Bottles":
+                size = st.selectbox("Size", ["330 ml", "500 ml", "1 L"])
+
+    # Submit button
+    if st.button("📤 Submit Manual Scan"):
+        if material == "Select..." or not subtype or subtype == "Select..." or not size:
+            st.error("Please select Material, Subtype and Size before submitting.")
+        else:
+            item_detail = {
+                "material": material,
+                "subtype": subtype,
+                "size": size
+            }
+            try:
+                resp = requests.post(f"{API}/scan", json={
+                    "student_id": student_id.strip(),
+                    "item_details": item_detail
+                })
+                if resp.status_code == 200:
+                    data = resp.json()
+                    st.success(f"✅ Manual scan recorded! You earned 10 points. Total: {data['student']['green_points']} points")
+                    st.balloons()
+                else:
+                    st.error("Failed to record manual scan. Check the server.")
+            except:
+                st.error("Could not connect to the server.")
+
+    st.markdown("---")
+
+    # ---- Simulate a QR scan (the old test) ----
+    st.subheader("🔄 Test: Simulate a QR Scan")
     if st.button("♻️ Scan QR Now (Add Points)"):
         try:
             resp = requests.post(f"{API}/scan", json={"student_id": student_id.strip()})
             if resp.status_code == 200:
                 data = resp.json()
                 st.success(f"✅ Points added! Your new balance: {data['student']['green_points']} points")
-                st.balloons() # احتفال بالبالونات عند كل عملية ناجحة
+                st.balloons()
             else:
                 st.error("Failed to add points. Check the server.")
         except:

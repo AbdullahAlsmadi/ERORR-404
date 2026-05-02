@@ -36,13 +36,14 @@ def summary():
 # ---- QR Scan (core functionality) ----
 class ScanRequest(BaseModel):
     student_id: str
+    item_details: dict = None   # optional field for manual entry
 
 @app.post("/scan")
 def scan_qr(req: ScanRequest):
     sid = req.student_id.strip()
     if not sid:
         raise HTTPException(status_code=400, detail="Student ID empty.")
-    updated = add_green_points(sid, points=10, carbon_saved=80)
+    updated = add_green_points(sid, points=10, carbon_saved=80, item_details=req.item_details)
     return {"message": f"Points added for {sid}", "student": updated}
 
 # ---- Student profile (for Wael's dashboard) ----
