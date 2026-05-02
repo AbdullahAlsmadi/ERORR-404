@@ -14,8 +14,8 @@ In another terminal:
 
 cd CodeXEnergy-Hackathon-StarterKit-main
 ..\..\..\.venv\Scripts\activate   # or .venv\Scripts\activate
-python -m streamlit run dashboard_template\dashboard.py
-
+python -m streamlit run dashboard_template\dashboard.py or
+python -m streamlit run CodeXEnergy-Hackathon-StarterKit-main\dashboard_template\dashboard.py
 The browser will open automatically at: http://localhost:8501
 
 ## 3. Using the System
