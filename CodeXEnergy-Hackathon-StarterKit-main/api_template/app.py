@@ -2,7 +2,15 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import pandas as pd
 import os
-from db import add_green_points, get_user, load_db, get_recent_scans, get_student_scans
+from db import (
+    add_green_points,
+    get_user,
+    load_db,
+    get_recent_scans,
+    get_student_scans,
+    redeem_item,
+    get_redemptions
+)
 
 app = FastAPI(
     title="EcoTrack API - ERROR-404",
@@ -33,18 +41,17 @@ def summary():
         raise HTTPException(status_code=500, detail="Data not loaded.")
     return df.describe().to_dict()
 
-# ---- QR Scan (core functionality) ----
+# ---- QR Scan ----
 class ScanRequest(BaseModel):
     student_id: str
-    item_details: dict = None   # optional field for manual entry
-    name: dict = None           # optional field for student name (e.g., {"first": "John", "last": "Doe"})
+    item_details: dict = None
+    name: dict = None
 
 @app.post("/scan")
 def scan_qr(req: ScanRequest):
     sid = req.student_id.strip()
     if not sid:
         raise HTTPException(status_code=400, detail="Student ID empty.")
-    # The backend now calculates points and carbon saved automatically from item_details
     updated = add_green_points(
         sid,
         item_details=req.item_details,
@@ -52,24 +59,20 @@ def scan_qr(req: ScanRequest):
     )
     return {"message": f"Points added for {sid}", "student": updated}
 
-# ---- Student profile (now includes recent scans) ----
+# ---- Student profile ----
 @app.get("/student/{student_id}")
 def student_profile(student_id: str):
     sid = student_id.strip()
     user = get_user(sid)
     if not user:
         raise HTTPException(status_code=404, detail="Student not found")
-
-    # Fetch the last 5 recycling operations for this student
     recent_ops = get_student_scans(sid, limit=5)
-
-    # Return user data plus their recent scans
     return {
         **user,
         "recent_scans": recent_ops
     }
 
-# ---- General statistics for admin dashboard ----
+# ---- Admin stats ----
 @app.get("/students")
 def get_all_students():
     db = load_db()
@@ -83,10 +86,32 @@ def get_all_students():
         "students": list(db.values())
     }
 
-# ---- Recent scan logs (all students) ----
+# ---- Recent scans ----
 @app.get("/scans")
 def recent_scans(limit: int = 10):
     return get_recent_scans(limit)
+
+# ==================== 🆕 REWARDS ====================
+
+class RedeemRequest(BaseModel):
+    student_id: str
+    reward_name: str
+    cost: int
+
+@app.post("/redeem")
+def redeem(req: RedeemRequest):
+    code, result = redeem_item(
+        req.student_id.strip(),
+        req.reward_name,
+        req.cost
+    )
+    if code is None:
+        raise HTTPException(status_code=400, detail=result)
+    return {"code": code, "new_points": result}
+
+@app.get("/redemptions/{student_id}")
+def get_student_redemptions(student_id: str):
+    return get_redemptions(student_id.strip())
 
 # ---- Server runner ----
 if __name__ == "__main__":

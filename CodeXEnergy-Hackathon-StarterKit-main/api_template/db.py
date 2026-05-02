@@ -1,9 +1,11 @@
 import json
 import os
 import datetime
+import uuid
 
 DB_PATH = os.path.join("data", "users.json")
 SCANS_PATH = os.path.join("data", "scans.json")
+REDEMPTIONS_PATH = os.path.join("data", "redemptions.json")
 
 def load_db():
     """Load the database from file. Create empty if not exists."""
@@ -141,3 +143,51 @@ def add_green_points(student_id, points=10, carbon_saved=80, item_details=None, 
     save_db(db)
     log_scan(student_id, points, carbon_saved, item_details)
     return db[student_id]
+
+# ==================== REWARDS SYSTEM ====================
+
+def redeem_item(student_id, reward_name, cost):
+    """
+    Deduct points and record a redemption.
+    Returns (code, new_points) or (None, error_message).
+    """
+    student_id = str(student_id)
+    db = load_db()
+    if student_id not in db:
+        return None, "Student not found"
+    user = db[student_id]
+    if user["green_points"] < cost:
+        return None, "Insufficient points"
+
+    # Deduct points
+    user["green_points"] -= cost
+    save_db(db)
+
+    # Generate unique redemption code
+    code = str(uuid.uuid4())[:8].upper()
+
+    # Record redemption
+    redemption = {
+        "student_id": student_id,
+        "reward_name": reward_name,
+        "cost": cost,
+        "code": code,
+        "timestamp": datetime.datetime.now().isoformat()
+    }
+    redemptions = []
+    if os.path.exists(REDEMPTIONS_PATH):
+        with open(REDEMPTIONS_PATH, "r") as f:
+            redemptions = json.load(f)
+    redemptions.append(redemption)
+    with open(REDEMPTIONS_PATH, "w") as f:
+        json.dump(redemptions, f, indent=4)
+
+    return code, user["green_points"]
+
+def get_redemptions(student_id):
+    """Retrieve redemption history for a specific student."""
+    if not os.path.exists(REDEMPTIONS_PATH):
+        return []
+    with open(REDEMPTIONS_PATH, "r") as f:
+        all_red = json.load(f)
+    return [r for r in all_red if str(r.get("student_id")) == str(student_id)]

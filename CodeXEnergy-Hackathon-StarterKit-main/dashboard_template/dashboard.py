@@ -8,6 +8,7 @@ from datetime import datetime
 import time
 import random
 from PIL import Image, ImageStat
+import uuid
 
 # ---- Page configuration ----
 st.set_page_config(page_title="EcoTrack | ERROR-404", layout="wide", page_icon="♻️")
@@ -16,7 +17,7 @@ API = "http://127.0.0.1:8000"
 
 # ---- Sidebar ----
 st.sidebar.markdown("### ⚙️ Settings")
-mode = st.sidebar.radio("Select View:", ["Admin Dashboard", "Student Mode"])
+mode = st.sidebar.radio("Select View:", ["Admin Dashboard", "Student Mode", "🎁 Rewards"])
 st.sidebar.markdown("---")
 st.sidebar.success("AI Core: Online 🤖")
 st.sidebar.info("CodeXEnergy Hackathon – Team ERROR-404")
@@ -167,7 +168,7 @@ if mode == "Admin Dashboard":
 # ================================================
 # 2. STUDENT MODE
 # ================================================
-else:
+elif mode == "Student Mode":
     st.title("🎓 EcoTrack Student Portal")
     student_id = st.text_input("Enter your Student ID:", "2021001")
 
@@ -186,9 +187,8 @@ else:
             student_carbon = prof.get("carbon_saved_grams", 0)
             profile_loaded = True
     except:
-        pass  # Server not running; profile_loaded stays False
+        pass
 
-    # ---- Step 0: Student Name (only if missing) ----
     show_name_fields = (not profile_loaded) or (student_name == "")
 
     if show_name_fields:
@@ -203,7 +203,6 @@ else:
             st.session_state.temp_first = first
             st.session_state.temp_last = last
     else:
-        # Name already exists, clear any saved temp name
         st.session_state.temp_first = ""
         st.session_state.temp_last = ""
         if student_name:
@@ -294,7 +293,6 @@ else:
             if material == "Select..." or not subtype or subtype == "Select..." or not size:
                 st.error("Please select Material, Subtype and Size before submitting.")
             else:
-                # Prepare name if fields are currently shown
                 name_payload = None
                 if show_name_fields:
                     first = st.session_state.get("temp_first", "")
@@ -316,11 +314,9 @@ else:
                         data = resp.json()
                         st.success(f"✅ Points added! Your new balance: {data['student']['green_points']} points")
                         st.balloons()
-                        # Reset AI verification for next scan
                         st.session_state.ai_verified = False
                         st.session_state.ai_material = None
                         st.session_state.ai_confidence = 0.0
-                        # If name was submitted, clear temp name and rerun to fetch new profile
                         if name_payload:
                             if "temp_first" in st.session_state:
                                 del st.session_state.temp_first
@@ -338,3 +334,80 @@ else:
         qr.save(buf, format="PNG")
         st.image(buf, caption="Your Personal Recycling QR Code", width=250)
         st.caption("Show this code at the recycling station to earn points.")
+
+# ================================================
+# 3. REWARDS PAGE
+# ================================================
+elif mode == "🎁 Rewards":
+    st.title("🎁 EcoTrack Rewards")
+    student_id = st.text_input("Enter your Student ID:", "2021001")
+
+    if student_id:
+        # Fetch student data
+        try:
+            resp = requests.get(f"{API}/student/{student_id.strip()}", timeout=2)
+            if resp.status_code == 200:
+                prof = resp.json()
+                st.success(f"Welcome, {prof.get('name') or student_id}! You have **{prof['green_points']}** points.")
+                current_points = prof['green_points']
+            else:
+                st.warning("Student not found.")
+                current_points = 0
+        except:
+            st.error("Could not connect to the server.")
+            current_points = 0
+
+        # Reward items
+        rewards = [
+            {"name": "☕ Free Coffee", "cost": 500},
+            {"name": "🍽️ Meal Discount", "cost": 300},
+            {"name": "👕 University T-Shirt", "cost": 1000},
+            {"name": "📓 Recycled Notebook", "cost": 200}
+        ]
+
+        st.subheader("Available Rewards")
+        cols = st.columns(2)
+        for i, reward in enumerate(rewards):
+            with cols[i % 2]:
+                locked = current_points < reward["cost"]
+                status = "🔒 Locked" if locked else "🔓 Available"
+                st.markdown(f"### {reward['name']}")
+                st.caption(f"Cost: {reward['cost']} points")
+                st.progress(min(current_points / reward["cost"], 1.0))
+                st.write(status)
+                if not locked:
+                    if st.button(f"Redeem {reward['name']}", key=f"redeem_{reward['name']}"):
+                        # Call redeem endpoint
+                        try:
+                            resp = requests.post(f"{API}/redeem", json={
+                                "student_id": student_id.strip(),
+                                "reward_name": reward["name"],
+                                "cost": reward["cost"]
+                            })
+                            if resp.status_code == 200:
+                                data = resp.json()
+                                code = data["code"]
+                                new_points = data["new_points"]
+                                st.success(f"✅ Redeemed! Your new balance: {new_points} points")
+                                st.markdown("**Show this QR code to the cashier:**")
+                                qr_img = qrcode.make(code)
+                                buf = BytesIO()
+                                qr_img.save(buf, format="PNG")
+                                st.image(buf, caption=f"Redemption Code: {code}", width=250)
+                                st.balloons()
+                            else:
+                                st.error(resp.json().get("detail", "Redemption failed."))
+                        except:
+                            st.error("Could not connect to server.")
+                st.write("---")
+
+        st.subheader("Redemption History")
+        try:
+            hist = requests.get(f"{API}/redemptions/{student_id.strip()}").json()
+            if hist:
+                df_hist = pd.DataFrame(hist)
+                st.dataframe(df_hist[['reward_name', 'cost', 'code', 'timestamp']], use_container_width=True, hide_index=True)
+            else:
+                st.info("No redemptions yet.")
+        except:
+            pass
