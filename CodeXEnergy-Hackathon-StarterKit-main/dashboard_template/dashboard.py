@@ -11,7 +11,7 @@ from PIL import Image, ImageStat
 import uuid
 
 # ---- Page configuration ----
-st.set_page_config(page_title="EcoTrack | ERROR-404", layout="wide", page_icon="♻️")
+st.set_page_config(page_title="Smart Recycling | ERROR-404", layout="wide", page_icon="♻️")
 
 API = "http://127.0.0.1:8000"
 
@@ -20,13 +20,13 @@ st.sidebar.markdown("### ⚙️ Settings")
 mode = st.sidebar.radio("Select View:", ["Admin Dashboard", "Student Mode", "🎁 Rewards"])
 st.sidebar.markdown("---")
 st.sidebar.success("AI Core: Online 🤖")
-st.sidebar.info("CodeXEnergy Hackathon – Team ERROR-404")
+st.sidebar.info("Smart Recycling – Team ERROR-404")
 
 # ================================================
 # 1. ADMIN DASHBOARD
 # ================================================
 if mode == "Admin Dashboard":
-    st.title("♻️ Admin Control Panel – Smart Campus")
+    st.title("♻️ Admin Control Panel – Smart Recycling")
 
     c1, c2, c3 = st.columns(3)
     c1.metric("AI Accuracy", "98.5%", "+0.2%")
