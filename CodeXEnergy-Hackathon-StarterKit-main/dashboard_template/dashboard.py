@@ -27,7 +27,6 @@ st.sidebar.info("CodeXEnergy Hackathon – Team ERROR-404")
 if mode == "Admin Dashboard":
     st.title("♻️ Admin Control Panel – Smart Campus")
 
-    # Live System Health (simulated)
     c1, c2, c3 = st.columns(3)
     c1.metric("AI Accuracy", "98.5%", "+0.2%")
     c2.metric("Active Machines", "12/12", "Stable")
@@ -35,7 +34,6 @@ if mode == "Admin Dashboard":
 
     st.divider()
 
-    # Manual refresh button
     col_refresh, col_time = st.columns([1, 3])
     with col_refresh:
         refresh = st.button("🔄 Refresh Now")
@@ -47,7 +45,6 @@ if mode == "Admin Dashboard":
         if st.session_state.last_update:
             st.caption(f"Last refreshed at: {st.session_state.last_update}")
 
-    # ---- Fetch data with caching ----
     @st.cache_data(ttl=5)
     def fetch_stats():
         try:
@@ -72,7 +69,6 @@ if mode == "Admin Dashboard":
     scans = fetch_scans()
     total_scans = len(scans)
 
-    # ---- Key metrics ----
     st.subheader("📊 Overall Performance")
     m1, m2, m3 = st.columns(3)
     m1.metric("👥 Active Students", stats["total_students"])
@@ -81,13 +77,11 @@ if mode == "Admin Dashboard":
 
     st.divider()
 
-    # ---- Donut chart & Recent scans (with real data) ----
     col_left, col_right = st.columns([1, 1.5])
 
     with col_left:
         st.subheader("📈 Waste Distribution (Real Data)")
 
-        # Count real materials from scans
         material_counts = {"Plastic": 0, "Paper": 0, "Glass": 0}
         for scan in scans:
             details = scan.get("item_details", {})
@@ -115,7 +109,6 @@ if mode == "Admin Dashboard":
             ).properties(height=300)
             st.altair_chart(chart, use_container_width=True)
 
-        # Dropdown to filter table by material
         highlight = st.selectbox("Filter table by material:", ["All", "Plastic", "Paper", "Glass"])
 
     with col_right:
@@ -149,8 +142,8 @@ if mode == "Admin Dashboard":
         else:
             st.info("No recycling scans yet.")
 
-        # ---- Top Recyclers ----
         st.markdown("<br>", unsafe_allow_html=True)
+
         st.subheader("🏆 Top Recyclers")
         students_list = stats.get("students", [])
         if students_list:
@@ -160,7 +153,6 @@ if mode == "Admin Dashboard":
         else:
             st.warning("Waiting for students to start recycling!")
 
-        # ---- All students table ----
         st.subheader("📋 All Registered Students")
         if students_list:
             df_all = pd.DataFrame(students_list)
@@ -173,13 +165,55 @@ if mode == "Admin Dashboard":
             st.info("No students have recycled yet.")
 
 # ================================================
-# 2. STUDENT MODE (AI verification with image analysis)
+# 2. STUDENT MODE
 # ================================================
 else:
     st.title("🎓 EcoTrack Student Portal")
     student_id = st.text_input("Enter your Student ID:", "2021001")
 
-    # ========== AI CAMERA VERIFICATION (Image color analysis) ==========
+    # ---- Fetch student profile to check name ----
+    profile_loaded = False
+    student_name = ""
+    student_pts = 0
+    student_carbon = 0
+
+    try:
+        resp = requests.get(f"{API}/student/{student_id.strip()}", timeout=2)
+        if resp.status_code == 200:
+            prof = resp.json()
+            student_name = prof.get("name", "").strip()
+            student_pts = prof.get("green_points", 0)
+            student_carbon = prof.get("carbon_saved_grams", 0)
+            profile_loaded = True
+    except:
+        pass  # Server not running; profile_loaded stays False
+
+    # ---- Step 0: Student Name (only if missing) ----
+    show_name_fields = (not profile_loaded) or (student_name == "")
+
+    if show_name_fields:
+        st.subheader("📝 Register Your Name")
+        st.info("You only need to do this once. Your name will appear on your green card.")
+        col_fname, col_lname = st.columns(2)
+        with col_fname:
+            first = st.text_input("First Name")
+        with col_lname:
+            last = st.text_input("Last Name")
+        if first and last:
+            st.session_state.temp_first = first
+            st.session_state.temp_last = last
+    else:
+        # Name already exists, clear any saved temp name
+        st.session_state.temp_first = ""
+        st.session_state.temp_last = ""
+        if student_name:
+            st.success(f"Welcome back, {student_name}!")
+            st.metric("🌿 Your Points", student_pts)
+            st.metric("🌍 CO₂ Saved (g)", student_carbon)
+
+    st.divider()
+
+    # ========== AI CAMERA VERIFICATION ==========
     st.subheader("📸 Step 1: AI Object Verification")
     st.info("The machine's internal camera verifies your item before awarding points.")
 
@@ -195,16 +229,12 @@ else:
         with st.spinner("🔍 AI is analyzing the material composition..."):
             time.sleep(1.2)
             try:
-                # Open image and get average color
                 img = Image.open(uploaded_file).convert("RGB")
                 stat = ImageStat.Stat(img)
-                r, g, b = stat.mean[:3]  # average red, green, blue
+                r, g, b = stat.mean[:3]
 
-                # Heuristic classification based on color
-                # If greenish (high green) or brownish (low blue, high red/green) -> Glass
                 if (g > 120 and r < 100 and b < 100) or (r > 160 and g > 100 and b < 80):
                     material_detected = "Glass"
-                # If very bright or white/beige -> Paper
                 elif (r > 200 and g > 200 and b > 200) or (abs(r-g) < 20 and abs(g-b) < 20 and r > 150):
                     material_detected = "Paper"
                 else:
@@ -215,8 +245,7 @@ else:
                 st.session_state.ai_material = material_detected
                 st.session_state.ai_confidence = confidence
                 st.success(f"✅ **AI Verified:** Detected **{material_detected}** item. (Confidence: {confidence}%)")
-            except Exception as e:
-                # Fallback to Plastic if analysis fails
+            except:
                 st.session_state.ai_verified = True
                 st.session_state.ai_material = "Plastic"
                 st.session_state.ai_confidence = 96.0
@@ -236,30 +265,26 @@ else:
     col_input, col_qr = st.columns([2, 1])
 
     with col_input:
-        # Default to AI-detected material if available
         default_mat = detected_material if detected_material else "Select..."
         mat_index = ["Select...", "Plastic", "Paper", "Glass"].index(default_mat) if default_mat in ["Plastic","Paper","Glass"] else 0
         material = st.selectbox("Material", ["Select...", "Plastic", "Paper", "Glass"], index=mat_index, disabled=not is_verified)
 
-        # Dynamically set subtype and size based on selected material
         subtype = None
         size = None
         if material == "Plastic":
             subtype = st.selectbox("Subtype", ["Select...", "Plastic Bottles", "Plastic Cups"], disabled=not is_verified)
-            if subtype and subtype != "Select...":
-                if subtype == "Plastic Bottles":
-                    size = st.selectbox("Size", ["1.5 L", "1 L"], disabled=not is_verified)
-                elif subtype == "Plastic Cups":
-                    size = st.selectbox("Size", ["7 oz", "8 oz", "12 oz"], disabled=not is_verified)
+            if subtype == "Plastic Bottles":
+                size = st.selectbox("Size", ["1.5 L", "1 L"], disabled=not is_verified)
+            elif subtype == "Plastic Cups":
+                size = st.selectbox("Size", ["7 oz", "8 oz", "12 oz"], disabled=not is_verified)
         elif material == "Paper":
             subtype = st.selectbox("Subtype", ["Select...", "Notebook", "Carton", "Paper Cups"], disabled=not is_verified)
-            if subtype and subtype != "Select...":
-                if subtype == "Paper Cups":
-                    size = st.selectbox("Size", ["7 oz", "8 oz", "12 oz"], disabled=not is_verified)
-                elif subtype == "Notebook":
-                    size = st.selectbox("Size", ["A4", "A5"], disabled=not is_verified)
-                elif subtype == "Carton":
-                    size = st.selectbox("Size", ["Small", "Medium", "Large"], disabled=not is_verified)
+            if subtype == "Paper Cups":
+                size = st.selectbox("Size", ["7 oz", "8 oz", "12 oz"], disabled=not is_verified)
+            elif subtype == "Notebook":
+                size = st.selectbox("Size", ["A4", "A5"], disabled=not is_verified)
+            elif subtype == "Carton":
+                size = st.selectbox("Size", ["Small", "Medium", "Large"], disabled=not is_verified)
         elif material == "Glass":
             subtype = st.selectbox("Subtype", ["Select...", "Glass Bottles"], disabled=not is_verified)
             if subtype == "Glass Bottles":
@@ -269,11 +294,23 @@ else:
             if material == "Select..." or not subtype or subtype == "Select..." or not size:
                 st.error("Please select Material, Subtype and Size before submitting.")
             else:
+                # Prepare name if fields are currently shown
+                name_payload = None
+                if show_name_fields:
+                    first = st.session_state.get("temp_first", "")
+                    last = st.session_state.get("temp_last", "")
+                    if first and last:
+                        name_payload = {"first": first, "last": last}
+                    else:
+                        st.error("Please enter your first and last name.")
+                        st.stop()
+
                 item_detail = {"material": material, "subtype": subtype, "size": size}
                 try:
                     resp = requests.post(f"{API}/scan", json={
                         "student_id": student_id.strip(),
-                        "item_details": item_detail
+                        "item_details": item_detail,
+                        "name": name_payload
                     })
                     if resp.status_code == 200:
                         data = resp.json()
@@ -283,6 +320,13 @@ else:
                         st.session_state.ai_verified = False
                         st.session_state.ai_material = None
                         st.session_state.ai_confidence = 0.0
+                        # If name was submitted, clear temp name and rerun to fetch new profile
+                        if name_payload:
+                            if "temp_first" in st.session_state:
+                                del st.session_state.temp_first
+                            if "temp_last" in st.session_state:
+                                del st.session_state.temp_last
+                            st.rerun()
                     else:
                         st.error("Failed to record scan. Check the server.")
                 except:

@@ -37,13 +37,20 @@ def summary():
 class ScanRequest(BaseModel):
     student_id: str
     item_details: dict = None   # optional field for manual entry
+    name: dict = None           # optional field for student name (e.g., {"first": "John", "last": "Doe"})
 
 @app.post("/scan")
 def scan_qr(req: ScanRequest):
     sid = req.student_id.strip()
     if not sid:
         raise HTTPException(status_code=400, detail="Student ID empty.")
-    updated = add_green_points(sid, points=10, carbon_saved=80, item_details=req.item_details)
+    updated = add_green_points(
+        sid,
+        points=10,
+        carbon_saved=80,
+        item_details=req.item_details,
+        name=req.name
+    )
     return {"message": f"Points added for {sid}", "student": updated}
 
 # ---- Student profile (now includes recent scans) ----

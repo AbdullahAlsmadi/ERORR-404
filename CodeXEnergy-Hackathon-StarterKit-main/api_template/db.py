@@ -59,10 +59,11 @@ def get_student_scans(student_id, limit=10):
     student_scans = [scan for scan in all_scans if str(scan.get("student_id")) == str(student_id)]
     return student_scans[-limit:]
 
-def add_green_points(student_id, points=10, carbon_saved=80, item_details=None):
+def add_green_points(student_id, points=10, carbon_saved=80, item_details=None, name=None):
     """
     Add green points and carbon saved for a student.
     Creates a new profile if student doesn't exist.
+    Optionally updates the student's name if provided and currently empty.
     """
     student_id = str(student_id)
     db = load_db()
@@ -74,9 +75,19 @@ def add_green_points(student_id, points=10, carbon_saved=80, item_details=None):
             "carbon_saved_grams": 0,
             "scan_count": 0
         }
+
+    # Update student name if provided and current name is empty
+    if name and isinstance(name, dict):
+        first = name.get("first", "").strip().title()
+        last = name.get("last", "").strip().title()
+        if first and last:
+            # Only update if the current name is empty (first registration)
+            if not db[student_id]["name"]:
+                db[student_id]["name"] = f"{first} {last}"
+
     db[student_id]["green_points"] += points
     db[student_id]["carbon_saved_grams"] += carbon_saved
     db[student_id]["scan_count"] = db[student_id].get("scan_count", 0) + 1
     save_db(db)
-    log_scan(student_id, points, carbon_saved, item_details)  # Record the scan with optional details
+    log_scan(student_id, points, carbon_saved, item_details)
     return db[student_id]
