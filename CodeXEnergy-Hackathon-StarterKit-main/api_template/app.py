@@ -9,7 +9,7 @@ app = FastAPI(
     description="QR-based Green Points & Carbon Tracking",
 )
 
-# ---- تحميل بيانات الـ Starter Kit (اختياري) ----
+# ---- Optional Starter Kit dataset loading ----
 DATA_PATH = os.path.join(os.path.dirname(__file__), "..", "datasets", "4_smart_grid", "smart_grid_dataset.csv")
 try:
     df = pd.read_csv(DATA_PATH)
@@ -33,7 +33,7 @@ def summary():
         raise HTTPException(status_code=500, detail="Data not loaded.")
     return df.describe().to_dict()
 
-# ---- مسح الـ QR (المهمة الأساسية) ----
+# ---- QR Scan (core functionality) ----
 class ScanRequest(BaseModel):
     student_id: str
 
@@ -45,7 +45,7 @@ def scan_qr(req: ScanRequest):
     updated = add_green_points(sid, points=10, carbon_saved=80)
     return {"message": f"Points added for {sid}", "student": updated}
 
-# ---- عرض ملف الطالب (لوائل) ----
+# ---- Student profile (for Wael's dashboard) ----
 @app.get("/student/{student_id}")
 def student_profile(student_id: str):
     user = get_user(student_id.strip())
@@ -53,7 +53,7 @@ def student_profile(student_id: str):
         raise HTTPException(status_code=404, detail="Student not found")
     return user
 
-# ---- الإحصائيات العامة للإدارة (جديد) ----
+# ---- General statistics for admin dashboard ----
 @app.get("/students")
 def get_all_students():
     db = load_db()
@@ -67,12 +67,12 @@ def get_all_students():
         "students": list(db.values())
     }
 
-# ---- سجل العمليات (جديد) ----
+# ---- Recent scan logs ----
 @app.get("/scans")
 def recent_scans(limit: int = 10):
     return get_recent_scans(limit)
 
-# ---- تشغيل الخادم ----
+# ---- Server runner ----
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
