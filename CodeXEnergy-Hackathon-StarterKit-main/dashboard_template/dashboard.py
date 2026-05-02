@@ -1,70 +1,117 @@
 import streamlit as st
 import pandas as pd
 import altair as alt
+import requests
+import qrcode
+from io import BytesIO
 
-# 1. Sayfa Ayarları (إعدادات الصفحة)
-st.set_page_config(page_title="Yeşil Puan | Kampüs Yönetimi", layout="wide", page_icon="♻️")
+# ---- إعدادات الصفحة ----
+st.set_page_config(page_title="EcoTrack | ERROR-404", layout="wide", page_icon="♻️")
 
-# 2. Başlık ve Açıklama (العنوان والوصف)
-st.title("♻️ 'Yeşil Puan' Sistemi - Akıllı Kampüs Yönetimi")
-st.markdown("""
-Bu panel, üniversite yönetiminin kampüs genelindeki geri dönüşüm faaliyetlerini izlemesi için tasarlanmıştır. 
-Öğrenciler QR kod okuttukça veriler anlık olarak güncellenir.
-""")
+API = "http://127.0.0.1:8000"
 
-st.divider()
+# ---- الشريط الجانبي لاختيار الوضع ----
+mode = st.sidebar.radio("🔁 اختر العرض:", ["📊 لوحة الإدارة", "🎓 وضع الطالب"])
+st.sidebar.markdown("---")
+st.sidebar.success("حالة الخادم: متصل 🟢")
+st.sidebar.info("المشروع ضمن تحدي CodeXEnergy - فريق ERROR-404")
 
-# 3. Özet Metrikler (الإحصائيات الرئيسية)
-st.subheader("📊 Genel Performans")
-m1, m2, m3, m4 = st.columns(4)
-m1.metric(label="Geri Dönüştürülen Toplam Atık", value="2,145 Adet", delta="+12% Bugün")
-m2.metric(label="Tasarruf Edilen Karbon (CO2)", value="185.4 kg", delta="-8.2 kg")
-m3.metric(label="Dağıtılan Yeşil Puan", value="21,450", delta="+1,200 اليوم")
-m4.metric(label="Aktif Katılımcı Öğrenci", value="642", delta="+15 Yeni")
+# ================================================
+# 1. وضع الإدارة (بيانات حية من API)
+# ================================================
+if mode == "📊 لوحة الإدارة":
+    st.title("♻️ 'Yeşil Puan' Sistemi - Akıllı Kampüs Yönetimi")
+    st.markdown("البيانات التالية **حية** من خادم EcoTrack.")
 
-st.divider()
+    # ---- جلب الإحصائيات من الخادم ----
+    try:
+        stats = requests.get(f"{API}/students").json()
+    except:
+        stats = {"total_students": 0, "total_points": 0, "total_carbon_grams": 0, "students": []}
 
-# 4. Veri Hazırlama (البيانات)
-@st.cache_data
-def get_final_data():
-    data = {
-        "Tarih": ["02.05 10:15", "02.05 11:30", "02.05 12:05", "02.05 12:45", "02.05 13:10", "02.05 13:45"],
-        "Öğrenci No": ["20230199", "20220455", "20240112", "20210988", "20230777", "20240552"],
-        "Atık Türü": ["Plastik", "Cam", "Kağıt", "Plastik", "Cam", "Kağıt"],
-        "Miktar": ["5 Şişe", "2 Şişe", "1.2 kg", "10 Şişe", "4 Şişe", "0.8 kg"],
-        "Puan": [50, 40, 30, 100, 80, 20],
-        "CO2 Tasarrufu (g)": [400, 600, 1200, 800, 1200, 800]
-    }
-    return pd.DataFrame(data)
+    # ---- البطاقات الرئيسية ----
+    st.subheader("📊 Genel Performans")
+    m1, m2, m3, m4 = st.columns(4)
+    m1.metric(label="👥 Aktif Katılımcı Öğrenci", value=stats["total_students"])
+    m2.metric(label="🌿 Dağıtılan Yeşil Puan", value=stats["total_points"])
+    m3.metric(label="🌍 Tasarruf Edilen Karbon (g)", value=stats["total_carbon_grams"])
+    # يمكن استبدال هذا بقيمة حقيقية لاحقاً عند دعم نوع النفايات
+    m4.metric(label="♻️ Geri Dönüştürülen Toplam Atık", value="...")
 
-df = get_final_data()
+    st.divider()
 
-# 5. Görselleştirme Bölümü (الرسوم البيانية)
-col_left, col_right = st.columns([1, 1.5])
+    # ---- الرسم البياني الدائري (يبقى افتراضياً حالياً) ----
+    col_left, col_right = st.columns([1, 1.5])
+    with col_left:
+        st.subheader("📈 Atık Dağılımı")
+        source = pd.DataFrame({
+            "Kategori": ["Plastik", "Kağıt", "Cam"],
+            "Değer": [55, 30, 15]
+        })
+        chart = alt.Chart(source).mark_arc(innerRadius=60).encode(
+            theta=alt.Theta(field="Değer", type="quantitative"),
+            color=alt.Color(field="Kategori", type="nominal",
+                            scale=alt.Scale(range=['#0068c9', '#83c9ff', '#29b09d'])),
+            tooltip=["Kategori", "Değer"]
+        ).properties(height=300)
+        st.altair_chart(chart, use_container_width=True)
+        st.info("💡 En çok geri dönüşüm **Plastik** kategorisinde yapılıyor.")
 
-with col_left:
-    st.subheader("📈 Atık Dağılımı")
-    # رسم بياني دائري لتوزيع أنواع النفايات
-    source = pd.DataFrame({
-        "Kategori": ["Plastik", "Kağıt", "Cam"],
-        "Değer": [55, 30, 15] # نسب مئوية افتراضية
-    })
-    
-    chart = alt.Chart(source).mark_arc(innerRadius=60).encode(
-        theta=alt.Theta(field="Değer", type="quantitative"),
-        color=alt.Color(field="Kategori", type="nominal", 
-                        scale=alt.Scale(range=['#0068c9', '#83c9ff', '#29b09d'])),
-        tooltip=["Kategori", "Değer"]
-    ).properties(height=300)
-    st.altair_chart(chart, use_container_width=True)
-    st.info("💡 En çok geri dönüşüm **Plastik** kategorisinde yapılıyor.")
+    # ---- سجل العمليات الحيّ ----
+    with col_right:
+        st.subheader("📋 Son İşlemler (Canlı Akış)")
+        try:
+            scans = requests.get(f"{API}/scans?limit=10").json()
+            if scans:
+                df_scans = pd.DataFrame(scans)
+                st.dataframe(df_scans, use_container_width=True, hide_index=True)
+            else:
+                st.info("لا توجد عمليات تدوير بعد.")
+        except:
+            st.warning("تعذر الاتصال بالخادم.")
 
-with col_right:
-    st.subheader("📋 Son İşlemler (Canlı Akış)")
-    st.dataframe(df, use_container_width=True, hide_index=True)
+# ================================================
+# 2. وضع الطالب (بطاقة + كود QR)
+# ================================================
+else:
+    st.title("🎓 بطاقتي الخضراء - EcoTrack")
+    student_id = st.text_input("أدخل رقمك الجامعي:", "2021001")
 
-# 6. Footer (تذييل الصفحة)
-st.sidebar.success("Sistem Durumu: Aktif 🟢")
-st.sidebar.write("---")
-st.sidebar.markdown("### Hedefimiz:")
-st.sidebar.info("Kampüs karbon ayak izini %20 oranında azaltmak.")
+    col1, col2 = st.columns(2)
+
+    with col1:
+        if st.button("🔍 عرض بطاقتي"):
+            try:
+                resp = requests.get(f"{API}/student/{student_id.strip()}")
+                if resp.status_code == 200:
+                    user = resp.json()
+                    st.success(f"أهلاً بالطالب {user.get('name') or student_id}")
+                    st.metric("🌿 نقاطي", user["green_points"])
+                    st.metric("🌍 الكربون الذي وفرته", f"{user['carbon_saved_grams']} جم")
+                else:
+                    st.warning("لا يوجد سجل تدوير بعد. النقاط 0.")
+            except:
+                st.error("تأكد أن الخادم يعمل.")
+
+    with col2:
+        # توليد QR من رقم الطالب
+        qr = qrcode.make(student_id.strip())
+        buf = BytesIO()
+        qr.save(buf, format="PNG")
+        st.image(buf, caption="📱 كود QR الخاص بك للتدوير", width=250)
+        st.caption("اعرض هذا الكود عند محطة التدوير لربح النقاط.")
+
+    # ---- محاكاة المسح (للتجربة) ----
+    st.divider()
+    st.subheader("🔄 تجربة: تنفيذ عملية تدوير (محاكاة)")
+    if st.button("♻️ امسح الكود الآن (أضف نقاطاً)"):
+        try:
+            resp = requests.post(f"{API}/scan", json={"student_id": student_id.strip()})
+            if resp.status_code == 200:
+                data = resp.json()
+                st.success(f"✅ تمت الإضافة! النقاط الآن: {data['student']['green_points']}")
+                st.balloons()
+            else:
+                st.error("فشل. تأكد من الخادم.")
+        except:
+            st.error("تعذر الاتصال بالخادم.")

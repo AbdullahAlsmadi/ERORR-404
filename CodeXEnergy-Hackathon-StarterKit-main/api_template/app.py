@@ -2,10 +2,10 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import pandas as pd
 import os
-from db import add_green_points, get_user
+from db import add_green_points, get_user, load_db, get_recent_scans
 
 app = FastAPI(
-    title="EcoTrack API - ERORR-404",
+    title="EcoTrack API - ERROR-404",
     description="QR-based Green Points & Carbon Tracking",
 )
 
@@ -33,7 +33,7 @@ def summary():
         raise HTTPException(status_code=500, detail="Data not loaded.")
     return df.describe().to_dict()
 
-# ---- مـسح الـ QR (المهمة الأساسية) ----
+# ---- مسح الـ QR (المهمة الأساسية) ----
 class ScanRequest(BaseModel):
     student_id: str
 
@@ -52,6 +52,25 @@ def student_profile(student_id: str):
     if not user:
         raise HTTPException(status_code=404, detail="Student not found")
     return user
+
+# ---- الإحصائيات العامة للإدارة (جديد) ----
+@app.get("/students")
+def get_all_students():
+    db = load_db()
+    total_students = len(db)
+    total_points = sum(user.get("green_points", 0) for user in db.values())
+    total_carbon = sum(user.get("carbon_saved_grams", 0) for user in db.values())
+    return {
+        "total_students": total_students,
+        "total_points": total_points,
+        "total_carbon_grams": total_carbon,
+        "students": list(db.values())
+    }
+
+# ---- سجل العمليات (جديد) ----
+@app.get("/scans")
+def recent_scans(limit: int = 10):
+    return get_recent_scans(limit)
 
 # ---- تشغيل الخادم ----
 if __name__ == "__main__":
