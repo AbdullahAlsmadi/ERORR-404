@@ -44,10 +44,9 @@ def scan_qr(req: ScanRequest):
     sid = req.student_id.strip()
     if not sid:
         raise HTTPException(status_code=400, detail="Student ID empty.")
+    # The backend now calculates points and carbon saved automatically from item_details
     updated = add_green_points(
         sid,
-        points=10,
-        carbon_saved=80,
         item_details=req.item_details,
         name=req.name
     )

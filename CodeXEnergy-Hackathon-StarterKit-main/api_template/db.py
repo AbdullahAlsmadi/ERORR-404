@@ -59,11 +59,58 @@ def get_student_scans(student_id, limit=10):
     student_scans = [scan for scan in all_scans if str(scan.get("student_id")) == str(student_id)]
     return student_scans[-limit:]
 
+def get_impact_from_item(item_details):
+    """
+    Return (carbon_saved_grams, points) based on material, subtype and size.
+    Uses realistic estimates for each recyclable item.
+    """
+    if not item_details or not isinstance(item_details, dict):
+        return 80, 10  # default fallback
+
+    material = item_details.get("material", "").strip().lower()
+    subtype = item_details.get("subtype", "").strip().lower()
+    size = item_details.get("size", "").strip().lower()
+
+    # Mapping: (material, subtype, size) -> (carbon_g, points)
+    mapping = {
+        ("plastic", "plastic bottles", "1.5 l"): (120, 12),
+        ("plastic", "plastic bottles", "1 l"): (80, 8),
+        ("plastic", "plastic cups", "7 oz"): (30, 3),
+        ("plastic", "plastic cups", "8 oz"): (30, 3),
+        ("plastic", "plastic cups", "12 oz"): (30, 3),
+        ("paper", "notebook", "a4"): (500, 50),
+        ("paper", "notebook", "a5"): (300, 30),
+        ("paper", "carton", "small"): (150, 15),
+        ("paper", "carton", "medium"): (250, 25),
+        ("paper", "carton", "large"): (400, 40),
+        ("paper", "paper cups", "7 oz"): (20, 2),
+        ("paper", "paper cups", "8 oz"): (20, 2),
+        ("paper", "paper cups", "12 oz"): (20, 2),
+        ("glass", "glass bottles", "330 ml"): (200, 20),
+        ("glass", "glass bottles", "500 ml"): (300, 30),
+        ("glass", "glass bottles", "1 l"): (500, 50),
+    }
+
+    key = (material, subtype, size)
+    if key in mapping:
+        return mapping[key]
+
+    # Fallback: approximate by material if exact match not found
+    if material == "plastic":
+        return 80, 10
+    elif material == "paper":
+        return 100, 10
+    elif material == "glass":
+        return 150, 15
+    return 80, 10
+
 def add_green_points(student_id, points=10, carbon_saved=80, item_details=None, name=None):
     """
     Add green points and carbon saved for a student.
     Creates a new profile if student doesn't exist.
     Optionally updates the student's name if provided and currently empty.
+    If item_details is provided, carbon_saved and points are calculated
+    from real-world impact values, ignoring the defaults.
     """
     student_id = str(student_id)
     db = load_db()
@@ -81,9 +128,12 @@ def add_green_points(student_id, points=10, carbon_saved=80, item_details=None, 
         first = name.get("first", "").strip().title()
         last = name.get("last", "").strip().title()
         if first and last:
-            # Only update if the current name is empty (first registration)
             if not db[student_id]["name"]:
                 db[student_id]["name"] = f"{first} {last}"
+
+    # Override points and carbon if item_details is available
+    if item_details:
+        carbon_saved, points = get_impact_from_item(item_details)
 
     db[student_id]["green_points"] += points
     db[student_id]["carbon_saved_grams"] += carbon_saved
