@@ -43,12 +43,21 @@ def log_scan(student_id, points, carbon, item_details=None):
         json.dump(scans, f, indent=4)
 
 def get_recent_scans(limit=10):
-    """Retrieve the last `limit` scan records."""
+    """Retrieve the last `limit` scan records (all students)."""
     if not os.path.exists(SCANS_PATH):
         return []
     with open(SCANS_PATH, "r") as f:
         scans = json.load(f)
     return scans[-limit:]
+
+def get_student_scans(student_id, limit=10):
+    """Retrieve the last scans for a specific student."""
+    if not os.path.exists(SCANS_PATH):
+        return []
+    with open(SCANS_PATH, "r") as f:
+        all_scans = json.load(f)
+    student_scans = [scan for scan in all_scans if str(scan.get("student_id")) == str(student_id)]
+    return student_scans[-limit:]
 
 def add_green_points(student_id, points=10, carbon_saved=80, item_details=None):
     """

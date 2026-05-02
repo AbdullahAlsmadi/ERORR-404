@@ -5,5 +5,12 @@
         "green_points": 10,
         "carbon_saved_grams": 80,
         "scan_count": 1
+    },
+    "221015215": {
+        "student_id": "221015215",
+        "name": "",
+        "green_points": 10,
+        "carbon_saved_grams": 80,
+        "scan_count": 1
     }
 }

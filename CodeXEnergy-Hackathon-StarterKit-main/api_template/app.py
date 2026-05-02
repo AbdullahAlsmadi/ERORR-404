@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import pandas as pd
 import os
-from db import add_green_points, get_user, load_db, get_recent_scans
+from db import add_green_points, get_user, load_db, get_recent_scans, get_student_scans
 
 app = FastAPI(
     title="EcoTrack API - ERROR-404",
@@ -46,13 +46,22 @@ def scan_qr(req: ScanRequest):
     updated = add_green_points(sid, points=10, carbon_saved=80, item_details=req.item_details)
     return {"message": f"Points added for {sid}", "student": updated}
 
-# ---- Student profile (for Wael's dashboard) ----
+# ---- Student profile (now includes recent scans) ----
 @app.get("/student/{student_id}")
 def student_profile(student_id: str):
-    user = get_user(student_id.strip())
+    sid = student_id.strip()
+    user = get_user(sid)
     if not user:
         raise HTTPException(status_code=404, detail="Student not found")
-    return user
+
+    # Fetch the last 5 recycling operations for this student
+    recent_ops = get_student_scans(sid, limit=5)
+
+    # Return user data plus their recent scans
+    return {
+        **user,
+        "recent_scans": recent_ops
+    }
 
 # ---- General statistics for admin dashboard ----
 @app.get("/students")
@@ -68,7 +77,7 @@ def get_all_students():
         "students": list(db.values())
     }
 
-# ---- Recent scan logs ----
+# ---- Recent scan logs (all students) ----
 @app.get("/scans")
 def recent_scans(limit: int = 10):
     return get_recent_scans(limit)
