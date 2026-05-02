@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
+from typing import Optional
 import pandas as pd
 import os
 from db import (
@@ -45,7 +46,7 @@ def summary():
 class ScanRequest(BaseModel):
     student_id: str
     item_details: dict = None
-    name: dict = None
+    name: Optional[dict] = None   # Fix for 422 error
 
 @app.post("/scan")
 def scan_qr(req: ScanRequest):
@@ -91,7 +92,7 @@ def get_all_students():
 def recent_scans(limit: int = 10):
     return get_recent_scans(limit)
 
-# ==================== 🆕 REWARDS ====================
+# ==================== REWARDS ====================
 
 class RedeemRequest(BaseModel):
     student_id: str

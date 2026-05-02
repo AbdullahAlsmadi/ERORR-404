@@ -64,5 +64,60 @@
             "subtype": "Notebook",
             "size": "A4"
         }
+    },
+    {
+        "student_id": "221015213",
+        "points_added": 12,
+        "carbon_saved": 120,
+        "timestamp": "2026-05-02T23:26:36.008572",
+        "item_details": {
+            "material": "Plastic",
+            "subtype": "Plastic Bottles",
+            "size": "1.5 L"
+        }
+    },
+    {
+        "student_id": "221015213",
+        "points_added": 50,
+        "carbon_saved": 500,
+        "timestamp": "2026-05-02T23:27:09.891015",
+        "item_details": {
+            "material": "Paper",
+            "subtype": "Notebook",
+            "size": "A4"
+        }
+    },
+    {
+        "student_id": "221015213",
+        "points_added": 50,
+        "carbon_saved": 500,
+        "timestamp": "2026-05-02T23:29:06.105542",
+        "item_details": {
+            "material": "Paper",
+            "subtype": "Notebook",
+            "size": "A4"
+        }
+    },
+    {
+        "student_id": "221015213",
+        "points_added": 12,
+        "carbon_saved": 120,
+        "timestamp": "2026-05-02T23:29:44.169155",
+        "item_details": {
+            "material": "Plastic",
+            "subtype": "Plastic Bottles",
+            "size": "1.5 L"
+        }
+    },
+    {
+        "student_id": "221015213",
+        "points_added": 50,
+        "carbon_saved": 500,
+        "timestamp": "2026-05-02T23:30:31.607831",
+        "item_details": {
+            "material": "Paper",
+            "subtype": "Notebook",
+            "size": "A4"
+        }
     }
 ]
