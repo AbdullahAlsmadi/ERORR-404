@@ -2,91 +2,58 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import pandas as pd
 import os
-
-# Import our custom database functions
 from db import add_green_points, get_user
 
 app = FastAPI(
-    title="EcoTrack API - CodeXEnergy Hackathon",
-    description="API for QR-based green points tracking and carbon footprint reduction",
+    title="EcoTrack API - ERORR-404",
+    description="QR-based Green Points & Carbon Tracking",
 )
 
-# -------------------------------
-# Starter Kit Data Loading (kept unchanged for reference)
-# -------------------------------
+# ---- تحميل بيانات الـ Starter Kit (اختياري) ----
 DATA_PATH = os.path.join(os.path.dirname(__file__), "..", "datasets", "4_smart_grid", "smart_grid_dataset.csv")
-
 try:
     df = pd.read_csv(DATA_PATH)
 except Exception as e:
-    print(f"Failed to load dataset: {e}")
+    print(f"Dataset error: {e}")
     df = pd.DataFrame()
 
-# -------------------------------
-# Root & Data Endpoints (unchanged)
-# -------------------------------
 @app.get("/")
-def read_root():
-    return {"message": "Welcome to the EcoTrack API! Scan a QR code to earn green points."}
+def root():
+    return {"message": "Welcome to EcoTrack API. POST /scan to earn points."}
 
 @app.get("/data")
-def get_data(limit: int = 10, skip: int = 0):
+def get_data(limit=10, skip=0):
     if df.empty:
-        raise HTTPException(status_code=500, detail="Data could not be loaded.")
-    subset = df.iloc[skip : skip + limit]
-    return subset.to_dict(orient="records")
+        raise HTTPException(status_code=500, detail="Data not loaded.")
+    return df.iloc[skip:skip+limit].to_dict(orient="records")
 
 @app.get("/data/summary")
-def get_data_summary():
+def summary():
     if df.empty:
-        raise HTTPException(status_code=500, detail="Data could not be loaded.")
+        raise HTTPException(status_code=500, detail="Data not loaded.")
     return df.describe().to_dict()
 
-# -------------------------------
-# ✅ NEW: QR Scan Endpoint (Task 1 & 2 Combined)
-# -------------------------------
-
-# Define the expected request body for the scan
+# ---- مـسح الـ QR (المهمة الأساسية) ----
 class ScanRequest(BaseModel):
     student_id: str
-    # Optional: you can add more fields like "item_type" later
 
 @app.post("/scan")
-def scan_qr(request: ScanRequest):
-    """
-    Called when a student scans their QR code at a recycling station.
-    Adds 10 green points and 80g of CO₂ saved to the student's profile.
-    Returns the updated profile.
-    """
-    student_id = request.student_id.strip()
+def scan_qr(req: ScanRequest):
+    sid = req.student_id.strip()
+    if not sid:
+        raise HTTPException(status_code=400, detail="Student ID empty.")
+    updated = add_green_points(sid, points=10, carbon_saved=80)
+    return {"message": f"Points added for {sid}", "student": updated}
 
-    if not student_id:
-        raise HTTPException(status_code=400, detail="Student ID cannot be empty.")
-
-    # Call our db.py function to add points and create user if needed
-    updated_user = add_green_points(student_id, points=10, carbon_saved=80)
-
-    return {
-        "message": f"Points added successfully for student {student_id}",
-        "student": updated_user
-    }
-
-# -------------------------------
-# 🔍 Get Student Profile Endpoint (Task 3 – for Wael's dashboard)
-# -------------------------------
+# ---- عرض ملف الطالب (لوائل) ----
 @app.get("/student/{student_id}")
-def get_student_profile(student_id: str):
-    """
-    Retrieve a single student's green points and carbon saved.
-    """
+def student_profile(student_id: str):
     user = get_user(student_id.strip())
     if not user:
-        raise HTTPException(status_code=404, detail="Student not found.")
+        raise HTTPException(status_code=404, detail="Student not found")
     return user
 
-# -------------------------------
-# Server Runner
-# -------------------------------
+# ---- تشغيل الخادم ----
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
