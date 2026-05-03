@@ -119,5 +119,16 @@
             "subtype": "Notebook",
             "size": "A4"
         }
+    },
+    {
+        "student_id": "221015213",
+        "points_added": 12,
+        "carbon_saved": 120,
+        "timestamp": "2026-05-03T09:12:10.891652",
+        "item_details": {
+            "material": "Plastic",
+            "subtype": "Plastic Bottles",
+            "size": "1.5 L"
+        }
     }
 ]

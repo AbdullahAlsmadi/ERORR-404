@@ -4,29 +4,28 @@ import altair as alt
 import requests
 import qrcode
 from io import BytesIO
-from datetime import datetime
+from datetime import datetime, timedelta
 import time
 import random
 from PIL import Image, ImageStat
-import uuid
 
 # ---- Page configuration ----
 st.set_page_config(page_title="Smart Recycling | ERROR-404", layout="wide", page_icon="♻️")
 
 API = "http://127.0.0.1:8000"
 
-# ---- Sidebar ----
-st.sidebar.markdown("### ⚙️ Settings")
-mode = st.sidebar.radio("Select View:", ["Admin Dashboard", "Student Mode", "🎁 Rewards"])
+# ---- Sidebar (clean & professional) ----
+st.sidebar.markdown("## ♻️ Smart Recycling")
 st.sidebar.markdown("---")
-st.sidebar.success("AI Core: Online 🤖")
-st.sidebar.info("Smart Campus – Team ERROR-404")
+mode = st.sidebar.radio("Navigate to:", ["Dashboard", "Recycle Page", "Student Profile"])
+st.sidebar.markdown("---")
+st.sidebar.caption("Team ERROR-404 | Hackathon 2026")
 
 # ================================================
 # 1. ADMIN DASHBOARD
 # ================================================
-if mode == "Admin Dashboard":
-    st.title("♻️ Admin Control Panel – Smart Recycling")
+if mode == "Dashboard":
+    st.title("♻️ Dashboard – Smart Recycling")
 
     c1, c2, c3 = st.columns(3)
     c1.metric("AI Accuracy", "98.5%", "+0.2%")
@@ -69,15 +68,45 @@ if mode == "Admin Dashboard":
     stats = fetch_stats()
     scans = fetch_scans()
     total_scans = len(scans)
+    students_list = stats.get("students", [])
 
+    # ---- Key metrics ----
     st.subheader("📊 Overall Performance")
-    m1, m2, m3 = st.columns(3)
-    m1.metric("👥 Active Students", stats["total_students"])
+    m1, m2, m3, m4 = st.columns(4)
+    m1.metric("🌱 Carbon Savers", stats["total_students"])
     m2.metric("🌿 Total Green Points", stats["total_points"])
     m3.metric("🌍 CO₂ Saved (g)", stats["total_carbon_grams"])
+    m4.metric("♻️ Total Scans", total_scans)
+
+    # ---- Impact equivalents ----
+    total_carbon = stats["total_carbon_grams"]
+    total_oil = total_carbon / 2300
+    total_energy = total_oil * 10
+    st.markdown("---")
+    c_oil, c_elec = st.columns(2)
+    c_oil.metric("🛢️ Total Crude Oil Saved", f"{total_oil:.0f} liters")
+    c_elec.metric("⚡ Total Electricity Saved", f"{total_energy:.0f} kWh")
 
     st.divider()
 
+    # ---- Top Carbon Savers Chart ----
+    if students_list:
+        st.subheader("🏅 Top Carbon Savers")
+        df_carbon = pd.DataFrame(students_list)
+        df_carbon['carbon_kg'] = df_carbon['carbon_saved_grams'] / 1000
+        top_carbon = df_carbon.sort_values('carbon_saved_grams', ascending=False).head(10)
+        chart_bar = alt.Chart(top_carbon).mark_bar().encode(
+            x=alt.X('carbon_kg:Q', title='CO₂ Saved (kg)'),
+            y=alt.Y('student_id:N', sort='-x', title='Student ID'),
+            color=alt.value('#2E8B57')
+        ).properties(height=300)
+        st.altair_chart(chart_bar, use_container_width=True)
+    else:
+        st.info("No students yet – start recycling to see the leaderboard.")
+
+    st.divider()
+
+    # ---- Donut chart & Recent scans ----
     col_left, col_right = st.columns([1, 1.5])
 
     with col_left:
@@ -145,8 +174,7 @@ if mode == "Admin Dashboard":
 
         st.markdown("<br>", unsafe_allow_html=True)
 
-        st.subheader("🏆 Top Recyclers")
-        students_list = stats.get("students", [])
+        st.subheader("🏆 Top Recyclers (by Points)")
         if students_list:
             top_students = sorted(students_list, key=lambda x: x.get('green_points', 0), reverse=True)[:3]
             df_top = pd.DataFrame(top_students)
@@ -166,13 +194,12 @@ if mode == "Admin Dashboard":
             st.info("No students have recycled yet.")
 
 # ================================================
-# 2. STUDENT MODE
+# 2. RECYCLE PAGE (Student Mode)
 # ================================================
-elif mode == "Student Mode":
-    st.title("🎓 EcoTrack Student Portal")
-    student_id = st.text_input("Enter your Student ID:", "2021001")
+elif mode == "Recycle Page":
+    st.title("Recycle Page")
+    student_id = st.text_input("Enter your Student ID:", "000000000")
 
-    # ---- Fetch student profile to check name ----
     profile_loaded = False
     student_name = ""
     student_pts = 0
@@ -205,10 +232,27 @@ elif mode == "Student Mode":
     else:
         st.session_state.temp_first = ""
         st.session_state.temp_last = ""
-        if student_name:
+        if student_name and profile_loaded:
             st.success(f"Welcome back, {student_name}!")
-            st.metric("🌿 Your Points", student_pts)
-            st.metric("🌍 CO₂ Saved (g)", student_carbon)
+
+            # ========== CARBON FOOTPRINT SECTION ==========
+            st.markdown("---")
+            co2_kg = student_carbon / 1000.0
+            st.markdown("## 🌱 Your Carbon Footprint Reduction")
+            st.metric(label="CO₂ Avoided", value=f"{co2_kg:.2f} kg")
+            goal_kg = 10.0
+            progress_co2 = min(co2_kg / goal_kg, 1.0)
+            st.progress(progress_co2, text=f"Towards {goal_kg} kg goal")
+
+            # Additional impact
+            st.markdown("---")
+            col1, col2, col3 = st.columns(3)
+            col1.metric("🌿 Green Points", student_pts)
+            col2.metric("🗑️ Items Recycled", prof.get("scan_count", 0))
+            oil_liters = student_carbon / 2300
+            energy_kwh = oil_liters * 10
+            col3.metric("🛢️ Oil Saved", f"{oil_liters:.2f} L")
+            st.metric("⚡ Electricity Saved", f"{energy_kwh:.2f} kWh")
 
     st.divider()
 
@@ -304,12 +348,11 @@ elif mode == "Student Mode":
                         st.stop()
 
                 item_detail = {"material": material, "subtype": subtype, "size": size}
+                payload = {"student_id": student_id.strip(), "item_details": item_detail}
+                if name_payload is not None:
+                    payload["name"] = name_payload
                 try:
-                    resp = requests.post(f"{API}/scan", json={
-                        "student_id": student_id.strip(),
-                        "item_details": item_detail,
-                        "name": name_payload
-                    })
+                    resp = requests.post(f"{API}/scan", json=payload)
                     if resp.status_code == 200:
                         data = resp.json()
                         st.success(f"✅ Points added! Your new balance: {data['student']['green_points']} points")
@@ -336,78 +379,132 @@ elif mode == "Student Mode":
         st.caption("Show this code at the recycling station to earn points.")
 
 # ================================================
-# 3. REWARDS PAGE
+# 3. STUDENT PROFILE (Rewards + Impact)
 # ================================================
-elif mode == "Rewards":
-    st.title("🎁 EcoTrack Rewards")
+elif mode == "Student Profile":
+    st.title("Student Profile & Rewards")
     student_id = st.text_input("Enter your Student ID:", "2021001")
 
     if student_id:
-        # Fetch student data
         try:
             resp = requests.get(f"{API}/student/{student_id.strip()}", timeout=2)
             if resp.status_code == 200:
                 prof = resp.json()
-                st.success(f"Welcome, {prof.get('name') or student_id}! You have **{prof['green_points']}** points.")
                 current_points = prof['green_points']
+                carb = prof.get('carbon_saved_grams', 0)
+                scan_count = prof.get('scan_count', 0)
+                student_name = prof.get('name', '')
+
+                st.success(f"Welcome, {student_name or student_id}!")
+                st.metric("🌿 Your Points", current_points)
+
+                # ---- Carbon Footprint & Impact ----
+                st.markdown("---")
+                co2_kg = carb / 1000.0
+                st.markdown("## 🌱 Your Carbon Footprint Reduction")
+                st.metric(label="CO₂ Avoided", value=f"{co2_kg:.2f} kg")
+                goal_kg = 10.0
+                progress_co2 = min(co2_kg / goal_kg, 1.0)
+                st.progress(progress_co2, text=f"Towards {goal_kg} kg goal")
+
+                st.markdown("---")
+                col1, col2, col3 = st.columns(3)
+                col1.metric("🗑️ Items Recycled", scan_count)
+                oil_liters = carb / 2300
+                energy_kwh = oil_liters * 10
+                col2.metric("🛢️ Crude Oil Saved", f"{oil_liters:.2f} L")
+                col3.metric("⚡ Electricity Saved", f"{energy_kwh:.2f} kWh")
+                st.caption("Every item recycled helps lower greenhouse gas emissions and dependency on fossil fuels.")
+
+                # ---- Future Projections ----
+                scans_list = prof.get("recent_scans", [])
+                if scans_list:
+                    timestamps = []
+                    for s in scans_list:
+                        try:
+                            ts = datetime.fromisoformat(s["timestamp"])
+                            timestamps.append(ts)
+                        except:
+                            pass
+                    if timestamps:
+                        earliest = min(timestamps)
+                        now = datetime.now()
+                        days_diff = (now - earliest).days
+                        if days_diff < 1:
+                            days_diff = 1
+                        daily_carbon = carb / days_diff
+                        monthly = daily_carbon * 30
+                        yearly = daily_carbon * 365
+
+                        st.markdown("---")
+                        st.subheader("📈 Future Projections (if you continue at this rate)")
+                        col_m, col_y = st.columns(2)
+                        col_m.metric("In 1 Month", f"{monthly/1000:.2f} kg CO₂")
+                        col_y.metric("In 1 Year", f"{yearly/1000:.2f} kg CO₂")
+                    else:
+                        st.info("Not enough data for projections yet.")
+                else:
+                    st.info("Start recycling to see future projections.")
+
             else:
-                st.warning("Student not found.")
+                st.warning("Student not found. Please register by doing a recycling scan first.")
                 current_points = 0
         except:
             st.error("Could not connect to the server.")
             current_points = 0
 
-        # Reward items
-        rewards = [
-            {"name": "☕ Free Coffee", "cost": 500},
-            {"name": "🍽️ Meal Discount", "cost": 300},
-            {"name": "👕 University T-Shirt", "cost": 1000},
-            {"name": "📓 Recycled Notebook", "cost": 200}
-        ]
+        # ---- Rewards grid ----
+        if current_points > 0 or (resp.status_code == 200 if 'resp' in locals() else False):
+            st.markdown("---")
+            rewards = [
+                {"name": "☕ Free Coffee", "cost": 500},
+                {"name": "🍽️ Meal Discount", "cost": 300},
+                {"name": "👕 University T-Shirt", "cost": 1000},
+                {"name": "📓 Recycled Notebook", "cost": 200}
+            ]
 
-        st.subheader("Available Rewards")
-        cols = st.columns(2)
-        for i, reward in enumerate(rewards):
-            with cols[i % 2]:
-                locked = current_points < reward["cost"]
-                status = "🔒 Locked" if locked else "🔓 Available"
-                st.markdown(f"### {reward['name']}")
-                st.caption(f"Cost: {reward['cost']} points")
-                st.progress(min(current_points / reward["cost"], 1.0))
-                st.write(status)
-                if not locked:
-                    if st.button(f"Redeem {reward['name']}", key=f"redeem_{reward['name']}"):
-                        # Call redeem endpoint
-                        try:
-                            resp = requests.post(f"{API}/redeem", json={
-                                "student_id": student_id.strip(),
-                                "reward_name": reward["name"],
-                                "cost": reward["cost"]
-                            })
-                            if resp.status_code == 200:
-                                data = resp.json()
-                                code = data["code"]
-                                new_points = data["new_points"]
-                                st.success(f"✅ Redeemed! Your new balance: {new_points} points")
-                                st.markdown("**Show this QR code to the cashier:**")
-                                qr_img = qrcode.make(code)
-                                buf = BytesIO()
-                                qr_img.save(buf, format="PNG")
-                                st.image(buf, caption=f"Redemption Code: {code}", width=250)
-                                st.balloons()
-                            else:
-                                st.error(resp.json().get("detail", "Redemption failed."))
-                        except:
-                            st.error("Could not connect to server.")
-                st.write("---")
+            st.subheader("Available Rewards")
+            cols = st.columns(2)
+            for i, reward in enumerate(rewards):
+                with cols[i % 2]:
+                    locked = current_points < reward["cost"]
+                    status = "🔒 Locked" if locked else "🔓 Available"
+                    st.markdown(f"### {reward['name']}")
+                    st.caption(f"Cost: {reward['cost']} points")
+                    st.progress(min(current_points / reward["cost"], 1.0))
+                    st.write(status)
+                    if not locked:
+                        if st.button(f"Redeem {reward['name']}", key=f"redeem_{reward['name']}"):
+                            try:
+                                resp = requests.post(f"{API}/redeem", json={
+                                    "student_id": student_id.strip(),
+                                    "reward_name": reward["name"],
+                                    "cost": reward["cost"]
+                                })
+                                if resp.status_code == 200:
+                                    data = resp.json()
+                                    code = data["code"]
+                                    new_points = data["new_points"]
+                                    st.success(f"✅ Redeemed! Your new balance: {new_points} points")
+                                    st.markdown("**Show this QR code to the cashier:**")
+                                    qr_img = qrcode.make(code)
+                                    buf = BytesIO()
+                                    qr_img.save(buf, format="PNG")
+                                    st.image(buf, caption=f"Redemption Code: {code}", width=250)
+                                    st.balloons()
+                                else:
+                                    st.error(resp.json().get("detail", "Redemption failed."))
+                            except:
+                                st.error("Could not connect to server.")
+                    st.write("---")
 
-        st.subheader("Redemption History")
-        try:
-            hist = requests.get(f"{API}/redemptions/{student_id.strip()}").json()
-            if hist:
-                df_hist = pd.DataFrame(hist)
-                st.dataframe(df_hist[['reward_name', 'cost', 'code', 'timestamp']], use_container_width=True, hide_index=True)
-            else:
-                st.info("No redemptions yet.")
-        except:
-            pass
+            st.subheader("Redemption History")
+            try:
+                hist = requests.get(f"{API}/redemptions/{student_id.strip()}").json()
+                if hist:
+                    df_hist = pd.DataFrame(hist)
+                    st.dataframe(df_hist[['reward_name', 'cost', 'code', 'timestamp']], use_container_width=True, hide_index=True)
+                else:
+                    st.info("No redemptions yet.")
+            except:
+                pass
