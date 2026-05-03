@@ -1,13 +1,13 @@
-import streamlit as st
-import pandas as pd
-import altair as alt
-import requests
-import qrcode
-from io import BytesIO
-from datetime import datetime, timedelta
-import time
-import random
-from PIL import Image, ImageStat
+import streamlit as st # For building the interactive web dashboard
+import pandas as pd # For data manipulation and display
+import altair as alt # For creating interactive charts
+import requests # For API calls to the backend
+import qrcode # For generating QR codes for student profiles and rewards
+from io import BytesIO # For handling in-memory image data
+from datetime import datetime, timedelta # For handling timestamps and projections
+import time # For simulating AI processing time
+import random # For simulating AI confidence scores
+from PIL import Image, ImageStat # For simple image analysis in AI verification step
 
 # ---- Page configuration ----
 st.set_page_config(page_title="Smart Recycling | ERROR-404", layout="wide", page_icon="♻️")
