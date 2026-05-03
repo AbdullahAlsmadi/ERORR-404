@@ -284,5 +284,16 @@
             "subtype": "Plastic Bottles",
             "size": "1.5 L"
         }
+    },
+    {
+        "student_id": "221015215",
+        "points_added": 12,
+        "carbon_saved": 120,
+        "timestamp": "2026-05-03T16:33:43.293777",
+        "item_details": {
+            "material": "Plastic",
+            "subtype": "Plastic Bottles",
+            "size": "1.5 L"
+        }
     }
 ]

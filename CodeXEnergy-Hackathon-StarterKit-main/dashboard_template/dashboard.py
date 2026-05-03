@@ -27,10 +27,6 @@ st.sidebar.caption("Team ERROR-404 | Hackathon 2026")
 if mode == "Dashboard":
     st.title("♻️ Dashboard – Smart Recycling")
 
-    c1, c2, c3 = st.columns(3)
-    c1.metric("AI Accuracy", "98.5%", "+0.2%")
-    c2.metric("Active Machines", "12/12", "Stable")
-    c3.metric("Fraud Attempts Blocked", "42", "-5")
 
     st.divider()
 
