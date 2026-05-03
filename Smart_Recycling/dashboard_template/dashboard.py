@@ -27,7 +27,6 @@ st.sidebar.caption("Team ERROR-404 | Hackathon 2026")
 if mode == "Dashboard":
     st.title("♻️ Dashboard – Smart Recycling")
 
-
     st.divider()
 
     col_refresh, col_time = st.columns([1, 3])
