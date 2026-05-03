@@ -198,7 +198,7 @@ if mode == "Dashboard":
 # ================================================
 elif mode == "Recycle Page":
     st.title("Recycle Page")
-    student_id = st.text_input("Enter your Student ID:", "000000000")
+    student_id = st.text_input("Enter your Student ID:", "")
 
     profile_loaded = False
     student_name = ""
@@ -383,7 +383,7 @@ elif mode == "Recycle Page":
 # ================================================
 elif mode == "Student Profile":
     st.title("Student Profile & Rewards")
-    student_id = st.text_input("Enter your Student ID:", "2021001")
+    student_id = st.text_input("Enter your Student ID:", "")
 
     if student_id:
         try:
