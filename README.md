@@ -131,14 +131,14 @@ Conversions:
 ---
 
 ## 🧑‍🤝‍🧑 Team
-ERROR-404
 
-- **Abdullah Al Smadi** – Backend & API development
+**ERROR-404**  
+- **Abdullah Al Smadi** – Backend & API development  
+- **Vael Kuloglu** – Frontend & Dashboard design  
 
-- **Vael Kuloglu** – Frontend & Dashboard design
+🏆 **Achievement:** Our team placed **14th out of 27 teams** with a final score of **491 points** in the CodeXEnergy 2026 Hackathon.  
 
-Built with passion during CodeXEnergy Hackathon 2026.
-
+*Built with passion during CodeXEnergy Hackathon 2026.*
 ---
 
 ## 📄 License
